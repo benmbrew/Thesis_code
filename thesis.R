@@ -41,12 +41,12 @@ dat <- read.csv("obesity_flu_absences_merged2.csv") #2 is the version ben fixed 
 ##################################################################################################
 #Try to ggplot something cool
 ################################################################################################
-#dat$year <- as.factor(dat$year)
+dat$year <- as.factor(dat$year)
 #create new columns for total  days, present days, and percent absent
-# dat$total_days <- dat$flu_days + dat$non_flu_days
-# dat$pres <- dat$total_days - dat$ab
-# dat$ab_per <- (dat$ab/dat$total_days)*100
-# dat$ab_per <- round(dat$ab_per, 2)
+ dat$total_days <- dat$flu_days + dat$non_flu_days
+dat$pres <- dat$total_days - dat$ab
+dat$ab_per <- (dat$ab/dat$total_days)*100
+dat$ab_per <- round(dat$ab_per, 2)
 # ggplot(dat, aes(year)) +                    
   #geom_line(aes(y=ab_flu_per), colour="red") +  
   #geom_line(aes(y=ab_per), colour="green")
@@ -90,26 +90,44 @@ race_ab$ci_low <- race_ab$mean-race_ab$error
 race_ab$ci_high <- race_ab$mean+race_ab$error
 
 # how to plot these CIs?
+bbar(y = race_ab$mean, 
+     yplus = race_ab$ci_high, 
+     yminus = race_ab$ci_low,
+     col= cols, 
+     ylim = c(0, 7),
+     border = NA)
+
+
 cols <- adjustcolor(colorRampPalette(c("lightblue"))(nrow(race_ab)), alpha.f = 0.5)
 bp <- barplot(race_ab$mean, 
               names.arg = race_ab$race,
-              cex.names = 0.7,
+              cex.names = 1,
               ylab = "Percent Absent",
+              xlab = "Race",
               las = 1,
               col = cols,
-              bty = "n",
-              ylim = c(0, 7))
+              ylim = c(0, 7),
+              border = NA)
 text(x = bp[,1], #why this box?
-     y = race_ab$mean,
+     y = 0,#race_ab$mean,
      pos = 3,
      labels = paste0(round(race_ab$mean, digits = 1), "%"),
-     cex = 0.9, 
+     cex = 1, 
      col = adjustcolor("black", alpha.f = 0.7))             
-box("plot")
+# box("plot")
 abline(h = seq(0,6,1), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
 title(main = "Absenteeism by Race")
+# add ci  using errbar
+errbar(x = bp[,1],
+       y = race_ab$mean, 
+       yplus = race_ab$ci_high,
+       yminus = race_ab$ci_low,
+       add = TRUE,
+       pch = NA, 
+       errbar.col = adjustcolor("darkred", alpha.f = 0.6),
+       lwd = 2)
 
-par(mfrow= c(1,1))
+
 
 ###
 # Try ggplot
@@ -125,12 +143,12 @@ par(mfrow= c(1,1))
 # by immmunization
 race_imm_fac <- dat %>%
   group_by(race) %>%
-  summarise(imm_true=sum(imm_fac == TRUE, na.rm = T),
-            imm_false=sum(imm_fac == FALSE, na.rm = T),
+  summarise(mean=mean(imm_fac == TRUE, na.rm = T),
+            sd= sd(imm_fac == TRUE, na.rm = T),
             n = n())
 
-
-race_imm_fac$mean <- (race_imm_fac$imm_true/(race_imm_fac$imm_true + race_imm_fac$imm_false))*100
+race_imm_fac$sd <- race_imm_fac$sd*100
+race_imm_fac$mean <- race_imm_fac$mean*100
 race_imm_fac$mean <- round(race_imm_fac$mean, 2)
 race_imm_fac <- race_imm_fac[-7,]
 race_imm_fac <- race_imm_fac[order(race_imm_fac$mean),]
@@ -139,24 +157,39 @@ race_imm_fac$race <- ifelse(race_imm_fac$race == "A", "Asian",
                                    ifelse(race_imm_fac$race == "W", "White",
                                           ifelse(race_imm_fac$race == "I", "Indian",
                                                  ifelse(race_imm_fac$race == "M", "Multi", "Hispanic")))))
-# This plot puts the numbers in wront place..
+# make CI lower and upper 
+race_imm_fac$error <- qt(0.975,df=race_imm_fac$n-1)*race_imm_fac$sd/sqrt(race_imm_fac$n)
+race_imm_fac$ci_low <- race_imm_fac$mean-race_imm_fac$error
+race_imm_fac$ci_high <- race_imm_fac$mean+race_imm_fac$error
+
+cols <- adjustcolor(colorRampPalette(c("lightblue"))(nrow(race_imm_fac)), alpha.f = 0.5)
 bp <- barplot(race_imm_fac$mean, 
               names.arg = race_imm_fac$race,
-              cex.names = 0.7,
-              las = 1,
-              bty = "n",
+              cex.names = 1,
               ylab = "Percent Absent",
+              xlab = "Race",
+              las = 1,
               col = cols,
-              ylim = c(0, 80))
-text(x = bp[,1],
-     y = race_ab$mean,
+              ylim = c(0, 70),
+              border = NA)
+text(x = bp[,1], #why this box?
+     y = 0,#race_ab$mean,
      pos = 3,
      labels = paste0(round(race_imm_fac$mean, digits = 1), "%"),
-     cex = 0.9, 
+     cex = 1, 
      col = adjustcolor("black", alpha.f = 0.7))             
-box("plot")
-abline(h = seq(0,80,10), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
-title(main = "Immunization Rate by Race")
+# box("plot")
+abline(h = seq(0,70,10), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
+title(main = "Immunization by Race")
+# add ci  using errbar
+errbar(x = bp[,1],
+       y = race_imm_fac$mean, 
+       yplus = race_imm_fac$ci_high,
+       yminus = race_imm_fac$ci_low,
+       add = TRUE,
+       pch = NA, 
+       errbar.col = adjustcolor("darkred", alpha.f = 0.6),
+       lwd = 2)
 
 #################################################################################################
 # Obesity
@@ -175,52 +208,90 @@ ob_ab <- dat %>%
 ob_ab$mean <- round(ob_ab$mean, 2)
 ob_ab <- ob_ab[order(ob_ab$mean),]
 
+# make CI lower and upper 
+ob_ab$error <- qt(0.975,df=ob_ab$n-1)*ob_ab$sd/sqrt(ob_ab$n)
+ob_ab$ci_low <- ob_ab$mean-ob_ab$error
+ob_ab$ci_high <- ob_ab$mean+ob_ab$error
+
+cols <- adjustcolor(colorRampPalette(c("lightblue"))(nrow(ob_ab)), alpha.f = 0.5)
 bp <- barplot(ob_ab$mean, 
               names.arg = ob_ab$cat,
-              cex.names = 0.7,
+              cex.names = 1,
+              ylab = "Percent Absent",
+              xlab = "Weight",
               las = 1,
               col = cols,
-              ylim = c(0, 8))
-text(x = bp[,1],
-     y = ob_ab$mean,
+              ylim = c(0, 6),
+              border = NA)
+text(x = bp[,1], #why this box?
+     y = 0,#race_ab$mean,
      pos = 3,
      labels = paste0(round(ob_ab$mean, digits = 1), "%"),
-     cex = 0.9, 
+     cex = 1, 
      col = adjustcolor("black", alpha.f = 0.7))             
-box("plot")
-abline(h = seq(0,7,2), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
-title(main = "Absence by Weight Category")
+# box("plot")
+abline(h = seq(0,6,1), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
+title(main = "Absenteeism by Weight Category")
+# add ci  using errbar
+errbar(x = bp[,1],
+       y = ob_ab$mean, 
+       yplus = ob_ab$ci_high,
+       yminus = ob_ab$ci_low,
+       add = TRUE,
+       pch = NA, 
+       errbar.col = adjustcolor("darkred", alpha.f = 0.6),
+       lwd = 2)
 
 
 #for immunization
 
 ob_imm <- dat %>%
   group_by(cat) %>%
-  summarise(imm_true = sum(imm_fac==TRUE, na.rm = T),
-            imm_false = sum(imm_fac== FALSE, na.rm = T),
+  summarise(mean = mean(imm_fac==TRUE, na.rm = T),
+            sd = sd(imm_fac== TRUE, na.rm = T),
             n = n())
 
-ob_imm$total <- ob_imm$imm_true + ob_imm$imm_false
-ob_imm$cat_mean <- (ob_imm$imm_true/ob_imm$total)*100
+ob_imm$mean <- ob_imm$mean*100
+ob_imm$sd <- ob_imm$sd*100
 
-ob_imm <- ob_imm[order(ob_imm$cat_mean),]
-ob_imm$cat_per <- round(ob_imm$cat_mean, 2)
+# make CI lower and upper 
+ob_imm$error <- qt(0.975,df=ob_imm$n-1)*ob_imm$sd/sqrt(ob_imm$n)
+ob_imm$ci_low <- ob_imm$mean-ob_imm$error
+ob_imm$ci_high <- ob_imm$mean+ob_imm$error
 
-bp <- barplot(ob_imm$cat_mean, 
+
+ob_imm <- ob_imm[order(ob_imm$mean),]
+
+cols <- adjustcolor(colorRampPalette(c("lightblue"))(nrow(ob_imm)), alpha.f = 0.5)
+bp <- barplot(ob_imm$mean, 
               names.arg = ob_imm$cat,
-              cex.names = 0.7,
+              cex.names = 1,
+              ylab = "Percent Immunized",
+              xlab = "Weight",
               las = 1,
               col = cols,
-              ylim = c(0, 60))
-text(x = bp[,1],
-     y = ob_imm$cat_mean,
+              ylim = c(0, 60),
+              border = NA)
+text(x = bp[,1], #why this box?
+     y = 0,#race_ab$mean,
      pos = 3,
-     labels = paste0(round(ob_imm$cat_mean, digits = 1), "%"),
-     cex = 0.9, 
+     labels = paste0(round(ob_imm$mean, digits = 1), "%"),
+     cex = 1, 
      col = adjustcolor("black", alpha.f = 0.7))             
-box("plot")
+# box("plot")
 abline(h = seq(0,60,10), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
-title(main = "Immunization Rate by Weight Category")
+title(main = "Immunization by Weight Category")
+# add ci  using errbar
+errbar(x = bp[,1],
+       y = ob_imm$mean, 
+       yplus = ob_imm$ci_high,
+       yminus = ob_imm$ci_low,
+       add = TRUE,
+       pch = NA, 
+       errbar.col = adjustcolor("darkred", alpha.f = 0.6),
+       lwd = 2)
+
+
 
 #################################################################################################
 # Free_Lunch
@@ -234,30 +305,47 @@ lunch_ab <- dat %>%
             sd = sd(ab_per, na.rm = T),
             n = n())
 
-
 lunch_ab$mean <- round(lunch_ab$mean, 2)
 lunch_ab$sd <- round(lunch_ab$sd)
-
 lunch_ab <- lunch_ab[-3,]
 lunch_ab$lunch_rec <- ifelse(lunch_ab$lunch_rec == "free", "Free", "Not Free")
 
+# make CI lower and upper 
+lunch_ab$error <- qt(0.975,df=lunch_ab$n-1)*lunch_ab$sd/sqrt(lunch_ab$n)
+lunch_ab$ci_low <- lunch_ab$mean-lunch_ab$error
+lunch_ab$ci_high <- lunch_ab$mean+lunch_ab$error
 
+
+lunch_ab <- lunch_ab[order(lunch_ab$mean),]
+
+cols <- adjustcolor(colorRampPalette(c("lightblue"))(nrow(lunch_ab)), alpha.f = 0.5)
 bp <- barplot(lunch_ab$mean, 
               names.arg = lunch_ab$lunch_rec,
-              cex.names = 0.7,
+              cex.names = 1,
+              ylab = "Percent Absent",
+              xlab = "Lunch status",
               las = 1,
               col = cols,
-              ylim = c(0, 7))
-text(x = bp,
-     y = lunch_ab$mean,
+              ylim = c(0, 6),
+              border = NA)
+text(x = bp[,1], #why this box?
+     y = 0,#race_ab$mean,
      pos = 3,
      labels = paste0(round(lunch_ab$mean, digits = 1), "%"),
-     cex = 0.9, 
+     cex = 1, 
      col = adjustcolor("black", alpha.f = 0.7))             
-box("plot")
-abline(h = seq(0,7,1), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
+# box("plot")
+abline(h = seq(0,6,1), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
 title(main = "Absenteeism by Lunch Status")
-
+# add ci  using errbar
+errbar(x = bp[,1],
+       y = lunch_ab$mean, 
+       yplus = lunch_ab$ci_high,
+       yminus = lunch_ab$ci_low,
+       add = TRUE,
+       pch = NA, 
+       errbar.col = adjustcolor("darkred", alpha.f = 0.6),
+       lwd = 2)
 
 
 
@@ -265,33 +353,51 @@ title(main = "Absenteeism by Lunch Status")
 
 lunch_imm <- dat %>% 
   group_by(lunch_rec) %>%
-  summarise(imm_true = sum(imm_fac==TRUE, na.rm = T),
-            imm_false = sum(imm_fac== FALSE, na.rm = T),
+  summarise(mean = mean(imm_fac==TRUE, na.rm = T),
+            sd = sd(imm_fac== TRUE, na.rm = T),
             n = n())
-
-lunch_imm$mean <- (lunch_imm$imm_true/(lunch_imm$imm_true + lunch_imm$imm_false)*100)
-lunch_imm$mean <- round(lunch_imm$mean, 2)
 
 lunch_imm <- lunch_imm[-3,]
 lunch_imm <- lunch_imm[order(lunch_imm$mean),]
 lunch_imm$mean <- round(lunch_imm$mean, 2)
 lunch_imm$lunch_rec <- ifelse(lunch_imm$lunch_rec ==  "free", "Free", "Not Free")
+lunch_imm$mean <- lunch_imm$mean*100
+lunch_imm$sd <- lunch_imm$sd*100
 
+# make CI lower and upper 
+lunch_imm$error <- qt(0.975,df=lunch_imm$n-1)*lunch_imm$sd/sqrt(lunch_imm$n)
+lunch_imm$ci_low <- lunch_imm$mean-lunch_imm$error
+lunch_imm$ci_high <- lunch_imm$mean+lunch_imm$error
+
+
+cols <- adjustcolor(colorRampPalette(c("lightblue"))(nrow(lunch_imm)), alpha.f = 0.5)
 bp <- barplot(lunch_imm$mean, 
               names.arg = lunch_imm$lunch_rec,
-              cex.names = 0.7,
+              cex.names = 1,
+              ylab = "Percent Immunized",
+              xlab = "Lunch status",
               las = 1,
               col = cols,
-              ylim = c(0, 70))
-text(x = bp[,1],
-     y = lunch_imm$mean,
+              ylim = c(0, 60),
+              border = NA)
+text(x = bp[,1], #why this box?
+     y = 0,#race_ab$mean,
      pos = 3,
      labels = paste0(round(lunch_imm$mean, digits = 1), "%"),
-     cex = 0.9, 
+     cex = 1, 
      col = adjustcolor("black", alpha.f = 0.7))             
-box("plot")
+# box("plot")
 abline(h = seq(0,60,10), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
 title(main = "Immunization by Lunch Status")
+# add ci  using errbar
+errbar(x = bp[,1],
+       y = lunch_imm$mean, 
+       yplus = lunch_imm$ci_high,
+       yminus = lunch_imm$ci_low,
+       add = TRUE,
+       pch = NA, 
+       errbar.col = adjustcolor("darkred", alpha.f = 0.6),
+       lwd = 2)
 
 
 ################################################################################################
@@ -309,6 +415,7 @@ race_flu_ab <- dat %>%
 # Drop NAs, 
 race_flu_ab <- race_flu_ab[-7,]
 race_flu_ab$mean <- race_flu_ab$mean*100
+race_flu_ab$sd <- race_flu_ab$sd*100
 race_flu_ab$mean <- round(race_flu_ab$mean, 2)
 race_flu_ab$mean <- as.numeric(race_flu_ab$mean)
 race_flu_ab <- race_flu_ab[order(race_flu_ab$mean),]
@@ -318,24 +425,42 @@ race_flu_ab$race <- ifelse(race_flu_ab$race == "A", "Asian",
                                      ifelse(race_flu_ab$race == "I", "Indian",
                                             ifelse(race_flu_ab$race == "M", "Multi", "Hispanic")))))
 
+## compute erros and ci lower and upper bound 95%
+
+race_flu_ab$error <- qt(0.975,df=race_flu_ab$n-1)*race_flu_ab$sd/sqrt(race_flu_ab$n)
+race_flu_ab$ci_low <- race_flu_ab$mean-race_flu_ab$error
+race_flu_ab$ci_high <- race_flu_ab$mean+race_flu_ab$error
 
 
+cols <- adjustcolor(colorRampPalette(c("lightblue"))(nrow(race_flu_ab)), alpha.f = 0.5)
 bp <- barplot(race_flu_ab$mean, 
               names.arg = race_flu_ab$race,
-              cex.names = 0.7,
+              cex.names = 1,
               ylab = "Percent Absent",
+              xlab = "Race",
               las = 1,
               col = cols,
-              ylim = c(0, 7))
-text(x = bp[,1],
-     y = race_flu_ab$mean,
+              ylim = c(0, 7),
+              border = NA)
+text(x = bp[,1], #why this box?
+     y = 0,#race_ab$mean,
      pos = 3,
      labels = paste0(round(race_flu_ab$mean, digits = 1), "%"),
-     cex = 0.9, 
+     cex = 1, 
      col = adjustcolor("black", alpha.f = 0.7))             
-box("plot")
+# box("plot")
 abline(h = seq(0,6,1), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
 title(main = "Flu Season Absenteeism by Race")
+# add ci  using errbar
+errbar(x = bp[,1],
+       y = race_ab$mean, 
+       yplus = race_flu_ab$ci_high,
+       yminus = race_flu_ab$ci_low,
+       add = TRUE,
+       pch = NA, 
+       errbar.col = adjustcolor("darkred", alpha.f = 0.6),
+       lwd = 2)
+
 
 
 ##############
@@ -353,24 +478,40 @@ ob_flu_ab <- dat %>%
 ob_flu_ab$mean <- ob_flu_ab$mean*100
 ob_flu_ab$mean <- round(ob_flu_ab$mean, 2)
 ob_flu_ab <- ob_flu_ab[order(ob_flu_ab$mean),]
+ob_flu_ab$sd <- ob_flu_ab$sd*100
+# make CI lower and upper 
+ob_flu_ab$error <- qt(0.975,df=ob_flu_ab$n-1)*ob_flu_ab$sd/sqrt(ob_flu_ab$n)
+ob_flu_ab$ci_low <- ob_flu_ab$mean-ob_flu_ab$error
+ob_flu_ab$ci_high <- ob_flu_ab$mean+ob_flu_ab$error
 
-# The numbers are in the cront place again
+cols <- adjustcolor(colorRampPalette(c("lightblue"))(nrow(ob_flu_ab)), alpha.f = 0.5)
 bp <- barplot(ob_flu_ab$mean, 
               names.arg = ob_flu_ab$cat,
-              cex.names = 0.7,
+              cex.names = 1,
+              ylab = "Percent Absent",
+              xlab = "Weight",
               las = 1,
               col = cols,
-              ylim = c(0, 8))
-text(x = bp[,1],
-     y = ob_ab$mean,
+              ylim = c(0, 7),
+              border = NA)
+text(x = bp[,1], #why this box?
+     y = 0,#race_ab$mean,
      pos = 3,
      labels = paste0(round(ob_flu_ab$mean, digits = 1), "%"),
-     cex = 0.9, 
+     cex = 1, 
      col = adjustcolor("black", alpha.f = 0.7))             
-box("plot")
-abline(h = seq(0,8,2), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
-title(main = "Flu Season Absence by Weight Category")
-
+# box("plot")
+abline(h = seq(0,7,1), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
+title(main = "Flu Season Absenteeism by Weight Category")
+# add ci  using errbar
+errbar(x = bp[,1],
+       y = ob_flu_ab$mean, 
+       yplus = ob_flu_ab$ci_high,
+       yminus = ob_flu_ab$ci_low,
+       add = TRUE,
+       pch = NA, 
+       errbar.col = adjustcolor("darkred", alpha.f = 0.6),
+       lwd = 2)
 
 
 ###############
@@ -385,29 +526,48 @@ lunch_flu_ab <- dat %>%
 
 lunch_flu_ab$mean <- (lunch_flu_ab$mean)*100
 lunch_flu_ab$mean <- round(lunch_flu_ab$mean, 2)
+lunch_flu_ab$sd <- lunch_flu_ab$sd*100
 
 lunch_flu_ab <- lunch_flu_ab[-3,]
 lunch_flu_ab$lunch_rec <- ifelse(lunch_flu_ab$lunch_rec == "free", "Free", "Not Free")
 
 
+# make CI lower and upper 
+lunch_flu_ab$error <- qt(0.975,df=lunch_flu_ab$n-1)*lunch_flu_ab$sd/sqrt(lunch_flu_ab$n)
+lunch_flu_ab$ci_low <- lunch_flu_ab$mean-lunch_flu_ab$error
+lunch_flu_ab$ci_high <- lunch_flu_ab$mean+lunch_flu_ab$error
+
+
+lunch_flu_ab <- lunch_flu_ab[order(lunch_flu_ab$mean),]
+
+cols <- adjustcolor(colorRampPalette(c("lightblue"))(nrow(lunch_flu_ab)), alpha.f = 0.5)
 bp <- barplot(lunch_flu_ab$mean, 
               names.arg = lunch_flu_ab$lunch_rec,
-              cex.names = 0.7,
+              cex.names = 1,
+              ylab = "Percent Absent",
+              xlab = "Lunch status",
               las = 1,
               col = cols,
-              ylim = c(0, 7))
-text(x = bp,
-     y = lunch_flu_ab$mean,
+              ylim = c(0, 7),
+              border = NA)
+text(x = bp[,1], #why this box?
+     y = 0,#race_ab$mean,
      pos = 3,
      labels = paste0(round(lunch_flu_ab$mean, digits = 1), "%"),
-     cex = 0.9, 
+     cex = 1, 
      col = adjustcolor("black", alpha.f = 0.7))             
-box("plot")
+# box("plot")
 abline(h = seq(0,7,1), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
 title(main = "Flu Season Absenteeism by Lunch Status")
-
-
-
+# add ci  using errbar
+errbar(x = bp[,1],
+       y = lunch_flu_ab$mean, 
+       yplus = lunch_flu_ab$ci_high,
+       yminus = lunch_flu_ab$ci_low,
+       add = TRUE,
+       pch = NA, 
+       errbar.col = adjustcolor("darkred", alpha.f = 0.6),
+       lwd = 2)
 
 
 #################################################################################################
@@ -424,25 +584,43 @@ grade_ab <- dat %>%
 
 grade_ab <- grade_ab[-6,]
 
-grade_ab$mean <- round(grade_ab$mean, 2)
+# make CI lower and upper 
+grade_ab$error <- qt(0.975,df=grade_ab$n-1)*grade_ab$sd/sqrt(grade_ab$n)
+grade_ab$ci_low <- grade_ab$mean-grade_ab$error
+grade_ab$ci_high <- grade_ab$mean+grade_ab$error
 
 
+grade_ab <- grade_ab[order(grade_ab$mean),]
+
+cols <- adjustcolor(colorRampPalette(c("lightblue"))(nrow(grade_ab)), alpha.f = 0.5)
 bp <- barplot(grade_ab$mean, 
               names.arg = grade_ab$school_grade,
-              cex.names = 0.7,
-              las = 3,
-              col = cols,
+              cex.names = 1,
+              ylab = "Percent Absent",
+              xlab = "School Grade",
               las = 1,
-              ylim = c(0, 8))
-text(x = bp[,1],
-     y = grade_ab$mean,
+              col = cols,
+              ylim = c(0, 7),
+              border = NA)
+text(x = bp[,1], #why this box?
+     y = 0,#race_ab$mean,
      pos = 3,
      labels = paste0(round(grade_ab$mean, digits = 1), "%"),
-     cex = 0.9,
+     cex = 1, 
      col = adjustcolor("black", alpha.f = 0.7))             
-box("plot")
-abline(h = seq(0,10,1), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
-title(main = "Absenteesim by School Grade")
+# box("plot")
+abline(h = seq(0,7,1), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
+title(main = "Absenteeism by School Performance")
+# add ci  using errbar
+errbar(x = bp[,1],
+       y = grade_ab$mean, 
+       yplus = grade_ab$ci_high,
+       yminus = grade_ab$ci_low,
+       add = TRUE,
+       pch = NA, 
+       errbar.col = adjustcolor("darkred", alpha.f = 0.6),
+       lwd = 2)
+
 
 #By Flu Absenteeism
 
@@ -456,55 +634,93 @@ grade_flu_ab <- grade_flu_ab[-6,]
 grade_flu_ab$mean <- grade_flu_ab$mean*100
 grade_flu_ab$sd <- grade_flu_ab$sd*100
 
+# make CI lower and upper 
+grade_flu_ab$error <- qt(0.975,df=grade_flu_ab$n-1)*grade_flu_ab$sd/sqrt(grade_flu_ab$n)
+grade_flu_ab$ci_low <- grade_flu_ab$mean-grade_flu_ab$error
+grade_flu_ab$ci_high <- grade_flu_ab$mean+grade_flu_ab$error
 
+
+grade_flu_ab <- grade_flu_ab[order(grade_flu_ab$mean),]
+
+cols <- adjustcolor(colorRampPalette(c("lightblue"))(nrow(grade_flu_ab)), alpha.f = 0.5)
 bp <- barplot(grade_flu_ab$mean, 
               names.arg = grade_flu_ab$school_grade,
-              cex.names = 0.7,
-              las = 3,
-              col = cols,
+              cex.names = 1,
+              ylab = "Percent Absent",
+              xlab = "School Grade",
               las = 1,
-              ylim = c(0, 8))
-text(x = bp[,1],
-     y = grade_flu_ab$mean,
+              col = cols,
+              ylim = c(0, 8),
+              border = NA)
+text(x = bp[,1], #why this box?
+     y = 0,#race_ab$mean,
      pos = 3,
      labels = paste0(round(grade_flu_ab$mean, digits = 1), "%"),
-     cex = 0.9,
+     cex = 1, 
      col = adjustcolor("black", alpha.f = 0.7))             
-box("plot")
-abline(h = seq(0,8,2), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
-title(main = "Flu Absenteesim by School Grade")
+# box("plot")
+abline(h = seq(0,8,1), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
+title(main = "Flu Season Absenteeism by School Performance")
+# add ci  using errbar
+errbar(x = bp[,1],
+       y = grade_flu_ab$mean, 
+       yplus = grade_flu_ab$ci_high,
+       yminus = grade_flu_ab$ci_low,
+       add = TRUE,
+       pch = NA, 
+       errbar.col = adjustcolor("darkred", alpha.f = 0.6),
+       lwd = 2)
 
 
 ## By Immunization
 
 grade_imm <- dat %>% 
   group_by(school_grade) %>% 
-  summarise(imm = sum(imm_fac == "TRUE", na.rm = T),
-            nonimm = sum(imm_fac == "FALSE", na.rm = T),
+  summarise(mean = mean(imm_fac == "TRUE", na.rm = T),
+            sd = sd(imm_fac == "FALSE", na.rm = T),
             n = n())
 
 grade_imm <- grade_imm[-6,]
+grade_imm$mean <- grade_imm$mean*100
+grade_imm$sd <- grade_imm$sd*100
 
-grade_imm$mean <- (grade_imm$imm/(grade_imm$imm + grade_imm$nonimm))*100
-grade_imm$mean <- round(grade_imm$mean, 2)
+# make CI lower and upper 
+grade_imm$error <- qt(0.975,df=grade_imm$n-1)*grade_imm$sd/sqrt(grade_imm$n)
+grade_imm$ci_low <- grade_imm$mean-grade_imm$error
+grade_imm$ci_high <- grade_imm$mean+grade_imm$error
+
+
+grade_imm <- grade_imm[order(grade_imm$mean),]
 
 cols <- adjustcolor(colorRampPalette(c("lightblue"))(nrow(grade_imm)), alpha.f = 0.5)
 bp <- barplot(grade_imm$mean, 
               names.arg = grade_imm$school_grade,
-              cex.names = 0.7,
-              las = 3,
-              col = cols,
+              cex.names = 1,
+              ylab = "Percent Immunized",
+              xlab = "School Grade",
               las = 1,
-              ylim = c(0, 60))
-text(x = bp[,1],
-     y = grade_imm$mean,
+              col = cols,
+              ylim = c(0, 60),
+              border = NA)
+text(x = bp[,1], #why this box?
+     y = 0,#race_ab$mean,
      pos = 3,
      labels = paste0(round(grade_imm$mean, digits = 1), "%"),
-     cex = 0.9, 
+     cex = 1, 
      col = adjustcolor("black", alpha.f = 0.7))             
-box("plot")
+# box("plot")
 abline(h = seq(0,60,10), col = adjustcolor("black", alpha.f = 0.2), lty = 3)
-title(main = "Immunization by School Grade")
+title(main = "Immunization by School Performance")
+# add ci  using errbar
+errbar(x = bp[,1],
+       y = grade_imm$mean, 
+       yplus = grade_imm$ci_high,
+       yminus = grade_imm$ci_low,
+       add = TRUE,
+       pch = NA, 
+       errbar.col = adjustcolor("darkred", alpha.f = 0.6),
+       lwd = 2)
+
 
 ################################################################################################
 # Show characteristics of each school to justify use in the regression
@@ -545,7 +761,7 @@ school_imm <- school_imm[which(school_imm$imm_true > 10),]
 plot(school_imm$herd, school_imm$ab_flu_per,
      pch = 19,
      cex = (school_imm$school_num)/12,
-     col = adjustcolor("darkgreen", alpha.f = 0.6),
+     col = adjustcolor("lightblue", alpha.f = 0.6),
      xlab = "Herd Immunity of School",
      ylab = "% FLu Season Absenteeism",
      xlim = c(20, 70),
@@ -569,7 +785,7 @@ abline(lm(school_imm$ab_flu_per ~ school_imm$herd), col = "red")
 plot(school_imm$herd, school_imm$ab_per,
      pch = 19,
      cex = (school_imm$school_num)/12,
-     col = adjustcolor("darkgreen", alpha.f = 0.6),
+     col = adjustcolor("lightblue", alpha.f = 0.6),
      xlab = "Herd Immunity of School",
      ylab = "% Absent",
      xlim = c(20, 70),
@@ -581,7 +797,7 @@ abline(h = seq(0, 10, 2),
 abline(v = seq(20, 80, 10),
        col = "lightgrey")
 legend("topright",
-       col = adjustcolor("darkgreen", alpha.f = 0.6),
+       col = adjustcolor("lightblue", alpha.f = 0.6),
        pch = 19,
        lty = 1,
        pt.cex = c(50, 40, 30, 20, 10)/12,
@@ -679,10 +895,10 @@ xtable(t_out(toutput=t.test, n.equal = TRUE, welch.df.exact = TRUE, welch.n = NA
 
 # t-test for white and nonwhite
 
-t.test <- t.test(x=dat$ab_non_flu_per[which(dat$race_rec=="white")], 
-       y=dat$ab_non_flu_per[which(dat$race_rec=="nonWhite")])
+t.test <- t.test(x=dat$ab_flu_per[which(dat$race_rec=="white")], 
+       y=dat$ab_flu_per[which(dat$race_rec=="nonWhite")])
 
-
+t.test
 xtable(t_out(toutput=t.test, n.equal = TRUE, welch.df.exact = TRUE, welch.n = NA,
              d.corr = TRUE, print = TRUE))
 
@@ -1099,6 +1315,9 @@ summary(dat_nonimm$predict_non) #4.898
 # round ab_non_flu_per
 dat$ab_non_flu_per <- dat$ab_non_flu_per*100
 dat$ab_non_flu_per <- round(dat$ab_non_flu_per, 0)
+# round ab_flu_per
+dat$ab_flu_per <- dat$ab_flu_per*100
+dat$ab_flu_per <- round(dat$ab_flu_per, 0)
 # round imm rate 
 dat$imm_rate <- round(dat$imm_rate, 0)
 dat$grade <- as.factor(dat$grade)
@@ -1148,41 +1367,22 @@ dat_match_cf <- as.data.frame(dat_match_cf)
 ###############################################################################################
 # unrelated to exposure (imm- not really true), but related to outcome (flu season)
 # some lit says to match with confounders related to both treatment and outcome, so this is kind
-# of a mix of the two approaches. 
-
-# With ab_non_flu_per
-match_sub <-  matchit(imm_fac ~ ab_non_flu_per,
-                      dat = dat_match, method = "subclass")
-summary(match_sub)
-match_sub.data <- match.data(match_sub)
-
-# need more varibles, the before mathed propensity is similar between to cases
-
-# With ab_non_flu_per and lunch
-match_sub2 <-  matchit(imm_fac ~ ab_non_flu_per + lunch_rec,
-                  data = dat_match, method = "subclass")
-summary(match_sub2)
-plot(match_sub2$subclass, match_sub2$distance)
-# a little improvement between mean distance diffs before matched, but too still small. 
+# of a mix of the two approaches.  
 
 # ab_non_flu_per and race
-match_sub3 <-  matchit(imm_fac ~ ab_non_flu_per + race,
+match_sub3 <-  matchit(imm_fac ~ ab_non_flu_per + race + lunch_rec + cat_bi + school_grade,
                        data = dat_match, method = "subclass")
 summary(match_sub3)
+match1 <- match.data(match_sub3)
 # better, race might be better than lunch
 
-# try with lunch added in
 
-match_sub4 <-  matchit(imm_fac ~ ab_non_flu_per + race + lunch_rec,
-                       data = dat_match, method = "subclass")
-summary(match_sub4)
-
-# add in age in grade
+# add in age in grade # THIS ONE for chosen matches
 match_sub4 <-  matchit(imm_fac ~ ab_non_flu_per + lunch_rec + grade
                        + imm_rate,
                        data = dat_match, method = "subclass")
 summary(match_sub4)
-match_sub.data <- match.data(match_sub4)
+match <- match.data(match_sub4)
 
 
 # 3) Nearest Neighbor Method #################################################################
@@ -1202,10 +1402,328 @@ match_sub.data <- match.data(match_sub4)
 
 
 ###############################################################################################
-# Post match analysis
+# Post match analysis on match- with non_flu_ab
 ###############################################################################################
 # t test, difference in difference t test, regressions on immunization, regressions on flu ab
 # explore all data.
+names(match)
+
+
+
+# break up subclasses
+nrow(match[which(match$subclass == 1),]) # 3,219
+nrow(match[which(match$subclass == 2),]) # 2,212
+nrow(match[which(match$subclass == 3),]) # 1,934
+nrow(match[which(match$subclass == 4),]) # 1,701
+nrow(match[which(match$subclass == 5),]) # 1,643
+nrow(match[which(match$subclass == 6),]) # 1,415
+
+sub1 <- match[which(match$subclass == 1),]
+sub2 <- match[which(match$subclass == 2),]
+sub3 <- match[which(match$subclass == 3),]
+sub4 <- match[which(match$subclass == 4),]
+sub5 <- match[which(match$subclass == 5),]
+sub6 <- match[which(match$subclass == 6),]
+
+# recall: I matched on ab_non_flu_per, lunch, grade, and imm_rate
+######
+# t test for non- flu season absenteeism
+######
+
+# sub1
+t.test <- t.test(x = sub1$ab_non_flu_per[which(sub1$imm_fac ==TRUE)], 
+                 y = sub1$ab_non_flu_per[which(sub1$imm_fac == FALSE)])
+t.test
+
+#sub2
+
+t.test <- t.test(x = sub2$ab_non_flu_per[which(sub2$imm_fac ==TRUE)], 
+                 y = sub2$ab_non_flu_per[which(sub2$imm_fac == FALSE)])
+t.test
+
+#sub3
+
+t.test <- t.test(x = sub3$ab_non_flu_per[which(sub3$imm_fac ==TRUE)], 
+                 y = sub3$ab_non_flu_per[which(sub3$imm_fac == FALSE)])
+t.test
+
+#sub4 
+
+t.test <- t.test(x = sub4$ab_non_flu_per[which(sub4$imm_fac ==TRUE)], 
+                 y = sub4$ab_non_flu_per[which(sub4$imm_fac == FALSE)])
+t.test
+
+# sub5 
+
+t.test <- t.test(x = sub5$ab_non_flu_per[which(sub5$imm_fac ==TRUE)], 
+                 y = sub5$ab_non_flu_per[which(sub5$imm_fac == FALSE)])
+t.test
+
+# sub6 
+
+t.test <- t.test(x = sub6$ab_non_flu_per[which(sub6$imm_fac ==TRUE)], 
+                 y = sub6$ab_non_flu_per[which(sub6$imm_fac == FALSE)])
+t.test
+
+# avg across all subclasses
+# x = 6.82, 4.68, 3.68, 3.05, 2.49, 1.64
+# y = 7.24, 4.88, 3.73, 3.12, 2.54, 1.81
+x <- (6.82 + 4.68 + 3.68 + 3.05 + 2.49 + 1.64)/6
+y <- (7.24 + 4.88 + 3.73 + 3.12 + 2.54 + 1.81)/6
+
+# recall: I matched on ab_non_flu_per, lunch, grade, and imm_rate
+######
+# t test for flu season absenteeism
+######
+
+# sub1
+t.test <- t.test(x = sub1$ab_flu_per[which(sub1$imm_fac ==TRUE)], 
+                 y = sub1$ab_flu_per[which(sub1$imm_fac == FALSE)])
+t.test
+
+#sub2
+
+t.test <- t.test(x = sub2$ab_flu_per[which(sub2$imm_fac ==TRUE)], 
+                 y = sub2$ab_flu_per[which(sub2$imm_fac == FALSE)])
+t.test
+
+#sub3
+
+t.test <- t.test(x = sub3$ab_flu_per[which(sub3$imm_fac ==TRUE)], 
+                 y = sub3$ab_flu_per[which(sub3$imm_fac == FALSE)])
+t.test
+
+#sub4 
+
+t.test <- t.test(x = sub4$ab_flu_per[which(sub4$imm_fac ==TRUE)], 
+                 y = sub4$ab_flu_per[which(sub4$imm_fac == FALSE)])
+t.test
+
+# sub5 
+
+t.test <- t.test(x = sub5$ab_flu_per[which(sub5$imm_fac ==TRUE)], 
+                 y = sub5$ab_flu_per[which(sub5$imm_fac == FALSE)])
+t.test
+
+# sub6 
+
+t.test <- t.test(x = sub6$ab_flu_per[which(sub6$imm_fac ==TRUE)], 
+                 y = sub6$ab_flu_per[which(sub6$imm_fac == FALSE)])
+t.test
+
+# x = 7.08, 4.85, 4.29, 3.55, 3.17, 2.91
+# y = 7.77, 5.38, 4.71, 4.03, 3.53, 3.41
+x1 <- (7.08 + 4.85 + 4.29 + 3.55 + 3.17 + 2.91)/6
+y2 <- (7.77 + 5.28 + 4.71 + 4.03 + 3.53 + 3.41)/6
+#those whoe are immunized increase the absentee rate by 4.30-3.72 = 0.58
+#those who are not immunzied increase the absentee rate by 4.78 - 3.88 = 0.9 
+# diff in increase of flu ab rate is .9 - .58 = -.32
+
+# regressions controlling for variables not matched on. make graphs
+# recall: I matched on ab_non_flu_per, lunch, grade, and imm_rate
+names(match)
+# excluding the matched variables, could still analyze, race_rec, cat_bi (fat = TRUE). 
+
+# t test for non flu season absenteeism and race
+# sub1
+t.test <- t.test(x = sub1$ab_non_flu_per[which(sub1$race_rec == "white")], 
+                 y = sub1$ab_non_flu_per[which(sub1$race_rec == "nonWhite")])
+t.test
+
+#sub2
+
+t.test <- t.test(x = sub2$ab_non_flu_per[which(sub2$race_rec == "white")], 
+                 y = sub2$ab_non_flu_per[which(sub2$race_rec == "nonWhite")])
+t.test
+
+#sub3
+
+t.test <- t.test(x = sub3$ab_non_flu_per[which(sub3$race_rec == "white")], 
+                 y = sub3$ab_non_flu_per[which(sub3$race_rec == "nonWhite")])
+t.test
+
+#sub4 
+
+t.test <- t.test(x = sub4$ab_non_flu_per[which(sub4$race_rec == "white")], 
+                 y = sub4$ab_non_flu_per[which(sub4$race_rec == "nonWhite")])
+t.test
+
+# sub5 
+
+t.test <- t.test(x = sub5$ab_non_flu_per[which(sub5$race_rec == "white")], 
+                 y = sub5$ab_non_flu_per[which(sub5$race_rec == "nonWhite")])
+t.test
+
+# sub6 
+
+t.test <- t.test(x = sub6$ab_non_flu_per[which(sub6$race_rec == "white")], 
+                 y = sub6$ab_non_flu_per[which(sub6$race_rec == "nonWhite")])
+t.test
+
+x = 
+y =
+
+# t test for flu non season absenteeism and cat_bi
+# sub1
+t.test <- t.test(x = sub1$ab_non_flu_per[which(sub1$cat_bi == TRUE)], 
+                   y = sub1$ab_non_flu_per[which(sub1$cat_bi == FALSE)])
+t.test
+
+#sub2
+
+t.test <- t.test(x = sub2$ab_non_flu_per[which(sub2$cat_bi == TRUE)], 
+                 y = sub2$ab_non_flu_per[which(sub2$cat_bi == FALSE)])
+t.test
+
+#sub3
+
+t.test <- t.test(x = sub3$ab_non_flu_per[which(sub3$cat_bi == TRUE)], 
+                 y = sub3$ab_non_flu_per[which(sub3$cat_bi == FALSE)])
+t.test
+
+#sub4 
+t.test <- t.test(x = sub4$ab_non_flu_per[which(sub4$cat_bi == TRUE)], 
+                 y = sub4$ab_non_flu_per[which(sub4$cat_bi == FALSE)])
+t.test
+
+# sub5 
+t.test <- t.test(x = sub5$ab_non_flu_per[which(sub5$cat_bi == TRUE)], 
+                 y = sub5$ab_non_flu_per[which(sub5$cat_bi == FALSE)])
+t.test
+# sub6 
+
+t.test <- t.test(x = sub6$ab_non_flu_per[which(sub6$cat_bi == TRUE)], 
+                 y = sub6$ab_non_flu_per[which(sub6$cat_bi == FALSE)])
+t.test
+
+x = 
+y =
+  
+
+
+
+
+###############################################################################################
+# Post match analysis on match1- without non_flu_ab
+###############################################################################################
+# t test, difference in difference t test, regressions on immunization, regressions on flu ab
+# explore all data.
+names(match1)
+
+
+
+# break up subclasses
+nrow(match[which(match1$subclass == 1),]) # 3,219
+nrow(match[which(match1$subclass == 2),]) # 2,212
+nrow(match[which(match1$subclass == 3),]) # 1,934
+nrow(match[which(match1$subclass == 4),]) # 1,701
+nrow(match[which(match1$subclass == 5),]) # 1,643
+nrow(match[which(match1$subclass == 6),]) # 1,415
+
+sub1 <- match1[which(match1$subclass == 1),]
+sub2 <- match1[which(match1$subclass == 2),]
+sub3 <- match1[which(match1$subclass == 3),]
+sub4 <- match1[which(match1$subclass == 4),]
+sub5 <- match1[which(match1$subclass == 5),]
+sub6 <- match1[which(match1$subclass == 6),]
+
+
+######
+# t test for non- flu season absenteeism
+######
+
+# sub1
+t.test <- t.test(x = sub1$ab_non_flu_per[which(sub1$imm_fac ==TRUE)], 
+                 y = sub1$ab_non_flu_per[which(sub1$imm_fac == FALSE)])
+t.test
+
+#sub2
+
+t.test <- t.test(x = sub2$ab_non_flu_per[which(sub2$imm_fac ==TRUE)], 
+                 y = sub2$ab_non_flu_per[which(sub2$imm_fac == FALSE)])
+t.test
+
+#sub3
+
+t.test <- t.test(x = sub3$ab_non_flu_per[which(sub3$imm_fac ==TRUE)], 
+                 y = sub3$ab_non_flu_per[which(sub3$imm_fac == FALSE)])
+t.test
+
+#sub4 
+
+t.test <- t.test(x = sub4$ab_non_flu_per[which(sub4$imm_fac ==TRUE)], 
+                 y = sub4$ab_non_flu_per[which(sub4$imm_fac == FALSE)])
+t.test
+
+# sub5 
+
+t.test <- t.test(x = sub5$ab_non_flu_per[which(sub5$imm_fac ==TRUE)], 
+                 y = sub5$ab_non_flu_per[which(sub5$imm_fac == FALSE)])
+t.test
+
+# sub6 
+
+t.test <- t.test(x = sub6$ab_non_flu_per[which(sub6$imm_fac ==TRUE)], 
+                 y = sub6$ab_non_flu_per[which(sub6$imm_fac == FALSE)])
+t.test
+
+# avg across all subclasses
+# x = 6.99, 4.43, 4.43, 3.27, 2.21, 1.05
+# y = 7.51, 4.30, 4.44, 3.43, 2.32, 1.15
+x <- (6.99 + 4.43 + 4.43 + 3.27 + 2.21 + 1.05)/6
+y <- (7.51 + 4.30 + 4.44 + 3.43 + 2.32 + 1.15)/6
+
+# recall: I matched on ab_non_flu_per, lunch, grade, and imm_rate
+######
+# t test for flu season absenteeism
+######
+
+# sub1
+t.test <- t.test(x = sub1$ab_flu_per[which(sub1$imm_fac ==TRUE)], 
+                 y = sub1$ab_flu_per[which(sub1$imm_fac == FALSE)])
+t.test
+
+#sub2
+
+t.test <- t.test(x = sub2$ab_flu_per[which(sub2$imm_fac ==TRUE)], 
+                 y = sub2$ab_flu_per[which(sub2$imm_fac == FALSE)])
+t.test
+
+#sub3
+
+t.test <- t.test(x = sub3$ab_flu_per[which(sub3$imm_fac ==TRUE)], 
+                 y = sub3$ab_flu_per[which(sub3$imm_fac == FALSE)])
+t.test
+
+#sub4 
+
+t.test <- t.test(x = sub4$ab_flu_per[which(sub4$imm_fac ==TRUE)], 
+                 y = sub4$ab_flu_per[which(sub4$imm_fac == FALSE)])
+t.test
+
+# sub5 
+
+t.test <- t.test(x = sub5$ab_flu_per[which(sub5$imm_fac ==TRUE)], 
+                 y = sub5$ab_flu_per[which(sub5$imm_fac == FALSE)])
+t.test
+
+# sub6 
+
+t.test <- t.test(x = sub6$ab_flu_per[which(sub6$imm_fac ==TRUE)], 
+                 y = sub6$ab_flu_per[which(sub6$imm_fac == FALSE)])
+t.test
+
+# x = 7.07, 5, 4.61, 3.68, 3.07, 2.43
+# y = 8.09, 4.77, 5.30, 4.47, 3.28, 2.81
+x1 <- (7.07 + 5 + 4.61 + 3.68 + 3.07 + 2.43)/6
+y2 <- (8.09 + 4.77 + 5.30 + 4.47 + 3.28 + 2.81)/6
+#those whoe are immunized increase the absentee rate by 4.31-3.73 = 0.58
+#those who are not immunzied increase the absentee rate by 4.78 - 3.86 = 0.92 
+# diff in increase of flu ab rate is .92 - .58 = .34
+
+
+# regressions controlling for variables not matched on. make graphs
+
 
 
 
